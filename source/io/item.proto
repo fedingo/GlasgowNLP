@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package music_io;
+
+message Item {
+  required Matrix features = 1;
+  optional string item_class = 2;
+  optional string item_review = 3;
+  repeated double item_targets = 4;
+  repeated string token_class = 5;
+}
+
+message Matrix {
+  required int32 feature_size = 1; 
+  repeated double flat_matrix = 2;
+}

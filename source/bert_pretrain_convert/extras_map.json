@@ -1,0 +1,15 @@
+{
+"embeddings.word_embeddings.weight": "embedder.weight",
+"embeddings.position_embeddings.weight": "position_embeddings.position_embeddings.weight",
+"embeddings.token_type_embeddings.weight": "position_embeddings.token_type_embeddings.weight",
+"embeddings.LayerNorm.weight": "position_embeddings.embedding_layer_norm.weight",
+"embeddings.LayerNorm.bias": "position_embeddings.embedding_layer_norm.bias",
+"pooler.dense.weight": null,
+"pooler.dense.bias": null,
+"cls.predictions.bias": null,
+"cls.predictions.transform.dense.weight": null,
+"cls.predictions.transform.dense.bias": null,
+"cls.predictions.transform.LayerNorm.weight": null,
+"cls.predictions.transform.LayerNorm.bias": null,
+"cls.predictions.decoder.weight": null
+}
