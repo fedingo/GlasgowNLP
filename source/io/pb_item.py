@@ -37,7 +37,7 @@ class pb_Item:
         
     
     def get_pb_obj(self):
-        assert self.features is not None, "Item not Initialized yet"
+        #assert self.features is not None, "Item not Initialized yet"
         
         pb_obj = Item()
         if self.review is not None:
