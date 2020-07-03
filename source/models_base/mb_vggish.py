@@ -11,11 +11,14 @@ from ..utils.mask_utils import mask_from_map, sample_map
 
 class MusicBertVGGish(nn.Module):
 
-    def __init__(self, dim_model=768, freeze_vggish = True, **kwargs):
+    def __init__(self, dim_model=768, freeze_vggish = True,
+                 skip_vggish = False, **kwargs):
         super().__init__()
         
         self.BERT = MusicBertBase(dim_model=dim_model, **kwargs)
                 
+        self.skip_vggish = skip_vggish
+            
         model_urls = {
             'vggish': 'https://github.com/harritaylor/torchvggish/'
                       'releases/download/v0.1/vggish-10086976.pth',
@@ -46,40 +49,14 @@ class MusicBertVGGish(nn.Module):
     def load_pretrained(self):
         self.BERT.load_pretrained()
         
-#     def __preprocess_sound(self, log_mel):
-        
-#         # assumes log_mel is of shape (seq_length, Batch_size, N_features)
-        
-#         log_mel = log_mel.permute(1,0,2) #makes batch first dimension
-        
-#         batch_size, seq_length, n_features = log_mel.shape
-        
-#         if seq_length < 96:
-#             # if less than 1 window size pad with zeros
-#             padded = torch.zeros(batch_size, 96, n_features).to(self.get_device())
-            
-#             padded[:, :seq_length, :] = log_mel
-#             log_mel = padded
-        
-#         windows_length = 96 # Parameter from vggish model
-#         seq_len = log_mel.shape[1]
-#         batch_size = log_mel.shape[0]
-#         seq_len -= seq_len%windows_length
-        
-#         num_frames = seq_len//windows_length
-#         shape = (batch_size, num_frames, 1, windows_length, log_mel.shape[-1])
-        
-#         log_mel = log_mel[:,:seq_len].view(shape).float() # breaks the seq_length in (n_frames, windows)
-        
-#         # output_shape is (seq_length, batch_size, channels, H, W)
-        
-#         return log_mel.permute(1,0,2,3,4).contiguous()
-        
         
     def process_sound(self, sound):
         if sound is not None:
-            sound = preprocess_sound(sound)
-            encoded_sound = self.vggish(sound)
+            if not self.skip_vggish:
+                sound = preprocess_sound(sound)
+                encoded_sound = self.vggish(sound)
+            else:
+                encoded_sound = sound # Signal Provided assumed to be VGGish features
             
             encoded_sound_proj = self.vggish_projector(encoded_sound)
             encoded_sound_proj = self.projector_activation(encoded_sound_proj)

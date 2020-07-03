@@ -3,6 +3,7 @@ import lmdb
 import csv
 from torch.utils.data import Dataset
 from multiprocessing import Manager
+import torch
 
 
 # Dataset specific for Log Mel Spectrograms
@@ -15,7 +16,7 @@ class MSDDatasetPretrain(Dataset):
                                   subdir=False, readonly=True, lock=False,
                                   readahead=False, meminit=False, max_readers=1)
         
-        mumu_dir = '../mumu/MuMu_dataset/'
+        mumu_dir = '../datasets/mumu/MuMu_dataset/'
         
         self.msd_ids_list = []
 
@@ -31,14 +32,22 @@ class MSDDatasetPretrain(Dataset):
             self.length = len(self.msd_ids_list)
         else:
             self.length = length
+            
+        self.pseudo_labels_dict = {}
                 
     def __len__(self):
         return self.length
     
     def get_features_size(self, log=False):
         return 64
+    
+    def set_pseudo_label(self, idx, pseudo_label):
+        self.pseudo_labels_dict[idx] = pseudo_label
 
     def __getitem__(self, idx):
+        
+        if idx >= len(self):
+            raise IndexError
         
         msd_id = self.msd_ids_list[idx][0:17] #Cutoff to comply with moodagent modified IDs
         msd_id = msd_id.encode()
@@ -49,7 +58,12 @@ class MSDDatasetPretrain(Dataset):
         assert data is not None, "Key Error in database"
         
         song_features = np.reshape(np.frombuffer(data), (-1, 64))
-        sample = {'song_features': song_features[:3000,:]}
+        song_features = torch.Tensor(song_features[:3000,:])
+        sample = {'song_features': song_features}
+        
+        if self.pseudo_labels_dict.get(idx) is not None:
+            sample['encoded_class'] = self.pseudo_labels_dict.get(idx)
+            sample['target'] = self.pseudo_labels_dict.get(idx)
 
         return sample
     

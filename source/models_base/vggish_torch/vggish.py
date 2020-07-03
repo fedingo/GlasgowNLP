@@ -103,7 +103,7 @@ class Postprocessor(nn.Module):
         normalized_embeddings = (clipped_embeddings - vggish_params.QUANTIZE_MIN_VAL) \
                                  / (vggish_params.QUANTIZE_MAX_VAL - vggish_params.QUANTIZE_MIN_VAL)
 
-        return normalized_embeddings
+        return quantized_embeddings
 
 
 def make_layers():

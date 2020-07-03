@@ -5,6 +5,13 @@ from transformers import BertTokenizer
 import numpy as np
 import torch
 
+
+def smooth(y, box_pts):
+    box = np.ones(box_pts)/box_pts
+    y_smooth = np.convolve(y, box, mode='same')
+    return y_smooth[box_pts:-box_pts]
+
+
 def visualize_vectors(BERT, dataset):
     
     index = np.random.randint(len(dataset))

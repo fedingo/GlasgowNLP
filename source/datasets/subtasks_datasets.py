@@ -3,11 +3,8 @@ import torch
 from torch.utils.data import Dataset
 import librosa
 import csv, lmdb
-
 from .base_dataset import CacheDataset
-#from ..utils. import *
-import warnings
-warnings.simplefilter("ignore")
+
 
 def create_sample_from_path(path):
     x, sr = librosa.load(path, sr = None)

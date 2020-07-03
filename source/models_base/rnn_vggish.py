@@ -9,10 +9,10 @@ from ..utils.mask_utils import mask_from_map, sample_map
 
 class RNNVGGish(nn.Module):
     
-    def __init__(self, dim_model=768, name="rnn", freeze_vggish = True):
+    def __init__(self, dim_model=768, name="rnn", freeze_vggish = True, num_encoder_layers=4):
         super().__init__()
                         
-        self.RNN = nn.RNN(dim_model, dim_model)
+        self.RNN = nn.RNN(dim_model, dim_model, num_layers=num_encoder_layers)
             
         model_urls = {
             'vggish': 'https://github.com/harritaylor/torchvggish/'
@@ -89,7 +89,7 @@ class RNNVGGish(nn.Module):
         extras = {
             "encoded_sound_1": encoded_sound,
             "mask_1": mask,
-            "sequence_vector": sequence_out.squeeze(0),
+            "sequence_vector": sequence_out[-1].squeeze(0),
 #            "layers_out": layers_out
         }
 

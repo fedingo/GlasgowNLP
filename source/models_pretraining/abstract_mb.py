@@ -16,6 +16,8 @@ class AbstractMusicBertPretraining(nn.Module):
         
         self.BERT = MusicBertVGGish(dim_model=dim_model, name=name,**kwargs)
                 
+            
+        # ACCIPICCHIA QUI NON CI VA LA DEFINIZIONE DELL'OPTIMIZER
         lr = 1e-3 # learning rate
         self.optimizer = torch.optim.SGD(self.parameters(), lr=lr)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
