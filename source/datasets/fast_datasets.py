@@ -29,6 +29,11 @@ class GTZANFastDataset(CacheDataset):
         self.genres = np.array(list(set([track["genre"] for track in self.db])))
         
         self.length = len(self.db)
+        self.set_tags("classification")
+        
+        
+    def get_num_classes(self):
+        return len(self.genres)
 
     def __create_sample__(self, idx):
         item = self.db[idx]
@@ -42,7 +47,7 @@ class GTZANFastDataset(CacheDataset):
         song_features = np.reshape(np.frombuffer(data), (-1, 64))
         
         encoded_genre, = np.where(self.genres == item["genre"])
-        sample['song_features'] = song_features
+        sample['song_features'] = song_features[:3000]
         sample['encoded_class'] = encoded_genre
                     
         return sample
@@ -70,6 +75,7 @@ class EmoMusicFastDataset(CacheDataset):
                                   readahead=False, meminit=False, max_readers=1)
                     
         self.length = len(self.db)
+        self.set_tags("regression")
 
 
     def __create_sample__(self, idx):
@@ -83,7 +89,7 @@ class EmoMusicFastDataset(CacheDataset):
         
         song_features = np.reshape(np.frombuffer(data), (-1, 64))
         
-        sample['song_features'] = song_features
+        sample['song_features'] = song_features[:3000]
         sample['target'] = np.array(item['emo_values']).astype(np.float)
         
         return sample
@@ -113,6 +119,7 @@ class MusicSpeechFastDataset(CacheDataset):
         self.classes = np.array(list(set([track["class"] for track in self.db])))
         
         self.length = len(self.db)
+        self.set_tags("classification")
 
     def __create_sample__(self, idx):
         item = self.db[idx]
@@ -154,6 +161,7 @@ class DeezerFastDataset(CacheDataset):
                                   readahead=False, meminit=False, max_readers=1)
                     
         self.length = len(self.db)
+        self.set_tags("regression")
 
 
     def __create_sample__(self, idx):
@@ -167,7 +175,7 @@ class DeezerFastDataset(CacheDataset):
         
         song_features = np.reshape(np.frombuffer(data), (-1, 64))
         
-        sample['song_features'] = song_features
+        sample['song_features'] = song_features[:3000]
         sample['target'] = np.array(item['emo_values']).astype(np.float)
         
         return sample
@@ -184,7 +192,7 @@ class MTATFastDataset(CacheDataset):
                     "57881",
                     "55753"]
         
-        top50tags_indeces = [0, 7, 10, 13, 14, 18, 27, 28, 34, 35, 39, 42, 45, 46,
+        self.top50tags_indeces = [0, 7, 10, 13, 14, 18, 27, 28, 34, 35, 39, 42, 45, 46,
                              47, 55, 59, 63, 67, 68, 70, 71, 78, 80, 81, 82, 84, 90,
                              91, 97, 115, 120, 123, 125, 132, 143, 144, 146, 147, 151,
                              153, 154, 159, 160, 165, 169, 173, 175, 177, 180]
@@ -197,7 +205,7 @@ class MTATFastDataset(CacheDataset):
                 if row[0] not in invalids:
                     
                     classes = []
-                    for tag_index in top50tags_indeces:
+                    for tag_index in self.top50tags_indeces:
                         classes.append(row[tag_index+1])
                     
                     self.db.append({
@@ -210,7 +218,11 @@ class MTATFastDataset(CacheDataset):
                                   readahead=False, meminit=False, max_readers=1)
                     
         self.length = len(self.db)
+        self.set_tags(["classification", "multi_label"])
 
+        
+    def get_num_classes(self):
+        return len(self.top50tags_indeces)
 
     def __create_sample__(self, idx):
         item = self.db[idx]
@@ -223,7 +235,7 @@ class MTATFastDataset(CacheDataset):
         
         song_features = np.reshape(np.frombuffer(data), (-1, 64))
         
-        sample['song_features'] = song_features
+        sample['song_features'] = song_features[:3000]
         sample['encoded_class'] = np.array(item['classes']).astype(np.int)
         
         return sample

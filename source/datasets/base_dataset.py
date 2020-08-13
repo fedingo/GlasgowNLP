@@ -14,6 +14,19 @@ class CacheDataset(Dataset):
         self.user_length = length
         self.length = None # inheritance length
         
+        self._tags = []
+        
+    def set_tags(self, list_of_tags):
+        
+        if type(list_of_tags) == list:
+            self._tags.extend(list_of_tags)
+        else:
+            self._tags.append(list_of_tags)
+            
+    @property
+    def tags(self):
+        return self._tags
+        
     def __create_sample__(self, idx):
         raise NotImplementedError
     

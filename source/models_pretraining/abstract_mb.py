@@ -18,17 +18,18 @@ class AbstractMusicBertPretraining(nn.Module):
                 
             
         # ACCIPICCHIA QUI NON CI VA LA DEFINIZIONE DELL'OPTIMIZER
-        lr = 1e-3 # learning rate
-        self.optimizer = torch.optim.SGD(self.parameters(), lr=lr)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
-
+        self.optimizer = None
         
         device = self.get_device()
         self.register_buffer("loss_curve", torch.tensor([]).to(device))
         self.register_buffer("validation_curve", torch.tensor([]).to(device))
-        self.register_buffer("cls_loss_curve", torch.tensor([]).to(device))
-        self.register_buffer("mask_loss_curve", torch.tensor([]).to(device))
 
+        
+    def init_optim(self):
+        lr = 1e-3 # learning rate
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=lr)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 1.0, gamma=0.95)
+        
         
     def get_device(self):
         return next(self.parameters()).device
@@ -66,13 +67,18 @@ class AbstractMusicBertPretraining(nn.Module):
     
     
     def pretrain_model(self, pretrain_dataloader, val_dataloader, epochs, eval_per_epoch=1):
+        
+        if self.optimizer is None:
+            self.init_optim()
 
         self.train()
+        
         pretrain_length = len(pretrain_dataloader)
         save_interval = eval_interval = pretrain_length//eval_per_epoch
 
         pbar = tqdm(generator_repeat(pretrain_dataloader, epochs),
                     total = pretrain_length*epochs,
+                    dynamic_ncols = True, # It properly sizes the bar, both in console and notebook mode
                     desc="Train ({:d}/{:d} Epoch) - Loss...".format(1, epochs))
         for i, batch in enumerate(pbar):
             self.optimizer.zero_grad() # Reset Grad
@@ -92,13 +98,16 @@ class AbstractMusicBertPretraining(nn.Module):
                                      .format(n_epoch+1, epochs, display_loss))
                 
             if i%eval_interval == -1%eval_interval and val_dataloader is not None:
-                tqdm.write("Evaluating...                             ", end="\r")
+#                 tqdm.write("Evaluating...                             ", end="\r")
                 eval_loss = self.evaluate(val_dataloader)
                 self.validation_curve = self.append(self.validation_curve, eval_loss)
-                tqdm.write('Eval Loss ({:d} steps) {:.4f}'.format(i, eval_loss), end="\r")
+#                 tqdm.write('Eval Loss ({:d} steps) {:.4f}'.format(i, eval_loss), end="\r")
 
             if i%save_interval == -1%save_interval:
                 self.save_model()
+                
+            if i%eval_interval == -1%eval_interval:
+                self.scheduler.step()
 
         
     def evaluate(self, val_dataloader):
@@ -108,7 +117,7 @@ class AbstractMusicBertPretraining(nn.Module):
             losses = torch.tensor([]).to(self.get_device())
             with Timer() as t:
                 for i, batch in enumerate(val_dataloader):
-                    print("{:d}%, Elapsed time {:d} s                  ".format(i*100//len(val_dataloader), int(t())), end="\r")   
+#                     print("{:d}%, Elapsed time {:d} s                  ".format(i*100//len(val_dataloader), int(t())), end="\r")   
                     loss = self.pretraining_loss(batch)
                     
                     losses = self.append(losses, loss.detach())

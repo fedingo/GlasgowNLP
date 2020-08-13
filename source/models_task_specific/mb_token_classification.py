@@ -5,9 +5,9 @@ import torch.nn as nn
 from .losses import ClassificationLoss
 from .abstract_mb import AbstractMusicBertTraining
 
-class MusicBertClassifier(AbstractMusicBertTraining):
+class MusicBertAudioset(AbstractMusicBertTraining):
 
-    def __init__(self, n_class, dim_model=768, multi_label=False, name="mb_classification", **kwargs):
+    def __init__(self, n_class, dim_model=768, multi_label=False, name="mb_audioset_tokens", **kwargs):
         super().__init__(name, dim_model=dim_model, **kwargs)    
         
         dim_vggish = 128
@@ -20,13 +20,14 @@ class MusicBertClassifier(AbstractMusicBertTraining):
         target = batch['encoded_class'].squeeze().long().to(self.get_device())
         
         # sample_sound dims = seq_len, batch_size, feat_dim
+        seq_len, batch_size, feat_dim = sample_sound.shape
         
-        c, extras = self.BERT(src_sound = sample_sound,
-                              return_extras = True) 
+        target = target.unsqueeze(0).repeat(seq_len, 1, 1)
+        c = self.BERT(src_sound = sample_sound,
+                      add_special_tokens=False)
+
         
-        seq_vector = extras['sequence_vector']
-        
-        loss = self.loss(seq_vector, target)
+        loss = self.loss(c, target)
                 
         return loss
     
@@ -40,13 +41,12 @@ class MusicBertClassifier(AbstractMusicBertTraining):
             
         sample_sound = sample_sound.permute(1,0,2)
         
-        c, extras = self.BERT(src_sound = sample_sound,
-                              return_extras = True) 
+        c = self.BERT(src_sound = sample_sound,
+                      add_special_tokens=False) 
         
-        seq_vector = extras['sequence_vector']
         
-        output = self.loss.predict(seq_vector)
-        return output.detach()
+        output = self.loss.predict(c)
+        return output
     
     
     def evaluate_fn(self, batch):
@@ -55,13 +55,14 @@ class MusicBertClassifier(AbstractMusicBertTraining):
         target = batch['encoded_class'].squeeze().long().to(self.get_device())
         
         # sample_sound dims = seq_len, batch_size, feat_dim
+        seq_len, batch_size, feat_dim = sample_sound.shape
         
-        c, extras = self.BERT(src_sound = sample_sound,
-                              return_extras = True) 
+        target = target.unsqueeze(0).repeat(seq_len, 1, 1)
+        c = self.BERT(src_sound = sample_sound,
+                      add_special_tokens=False) 
         
-        seq_vector = extras['sequence_vector']
         
-        score = self.loss.score(seq_vector, target)
+        score = self.loss.score(c, target)
         return score
         
         

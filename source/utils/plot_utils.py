@@ -51,10 +51,11 @@ def plot_layers (matrices_list, prefix_name = "Title", graph_height=2):
     plt.subplots_adjust(top=0.99, bottom=0.01)
     
     
-def plot_curve(curve, eval_per_epoch, color = "red", metric_label="Loss"):
+def plot_curve(curve, eval_per_epoch, color = "red", metric_label="Loss", label=''):
     
     x = np.array(range(len(curve)))//eval_per_epoch
-    plt.plot(x, curve, color)
+    plt.plot(x, curve, color, label=label)
     plt.ylabel(metric_label)
-    plt.xlabel('Steps')
+    plt.xlabel('Evals')
+    plt.legend()
     plt.show()

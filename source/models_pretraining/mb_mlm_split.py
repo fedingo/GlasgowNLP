@@ -10,7 +10,7 @@ from .abstract_mb import AbstractMusicBertPretraining
 
 class MusicBertMLM_split(AbstractMusicBertPretraining):
 
-    def __init__(self, dim_model=768, CLS_training = "song_matching", MLM_training="mse", name="music_bert_mlm", **kwargs):
+    def __init__(self, dim_model=768, CLS_training = "SM", MLM_training="MSE", name="music_bert_mlm", **kwargs):
         super().__init__(name, dim_model=dim_model, **kwargs)
 
         
@@ -28,6 +28,9 @@ class MusicBertMLM_split(AbstractMusicBertPretraining):
         self.CLS_training = CLS_training
 
         self.flipper = True
+        
+        self.register_buffer("cls_loss_curve", torch.tensor([]).to(device))
+        self.register_buffer("mask_loss_curve", torch.tensor([]).to(device))
         
         
     def generate_CLS(self, sample_1, sample_2):
@@ -52,25 +55,21 @@ class MusicBertMLM_split(AbstractMusicBertPretraining):
     def pretraining_loss(self, batch):
         
         sample_sound = batch['song_features'].to(self.get_device()).permute(1,0,2)
-
         seq_len, batch_size, feat_dims = sample_sound.shape
         
         ### Preprocessing
-        
         cut_index = seq_len // 2
         
         sample_sound_1, sample_sound_2 = sample_sound[:cut_index], sample_sound[cut_index:]
-        
         CLS_target, sample_sound_1, sample_sound_2 = self.generate_CLS(sample_sound_1, sample_sound_2)
                 
-        
         output, extras = self.BERT(src_sound = sample_sound_1,
                                   src_sound2 = sample_sound_2,
                                   mask = True,
                                   return_extras = True) 
         
-        ### Output Extraction
         
+        ### Output Extraction
         encoded_sound_1, encoded_sound_2 =  extras['encoded_sound_1'], extras['encoded_sound_2']
         mask_1, mask_2 = extras['mask_1'], extras['mask_2']
         

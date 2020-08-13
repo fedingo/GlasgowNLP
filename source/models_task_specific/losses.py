@@ -15,9 +15,10 @@ def torch_recall_score(output, target):
     fn = torch.sum((combo == 2).float())
     
     if tp + fn == 0:
-        return 0
+        return tp # returns tensor with value 0
     
     return tp/(tp+fn)
+
 
 class ClassificationLoss(nn.Module):
     
@@ -31,13 +32,15 @@ class ClassificationLoss(nn.Module):
         
         # Allows for multi-label classification using a different loss
         if multi_label:
-            self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.ones(n_class)*n_class) # Implicitly applies Sigmoid on the output
+            self.criterion = nn.BCEWithLogitsLoss() # Implicitly applies Sigmoid on the output
+            # pos_weight=torch.ones(n_class)*n_class
         else:
             self.criterion = nn.CrossEntropyLoss() # Implicitly applies Softmax on the output
     
-    def forward(self, seq_vector, target):
+    def forward(self, vector, target):
         
-        output = self.predict(seq_vector)
+        h = F.relu(self.fc1(vector))
+        output = self.fc2(h)
         
         if self.multi_label:
             target = target.float()
@@ -46,15 +49,18 @@ class ClassificationLoss(nn.Module):
         
         return loss
     
-    def predict(self, seq_vector):
-        h = F.relu(self.fc1(seq_vector))
+    def predict(self, vector):
+        h = F.relu(self.fc1(vector))
         output = self.fc2(h)
-        return output
-    
-    def accuracy(self, seq_vector, y_true):
         
-        h = F.relu(self.fc1(seq_vector))
-        scores = self.fc2(h)
+        if not self.multi_label:
+            return F.softmax(output, dim=-1)
+        else:
+            return torch.sigmoid(output)
+    
+    def score(self, vector, y_true):
+        
+        scores = self.predict(vector)
         
         if not self.multi_label:
             y_pred = torch.argmax(scores, dim=-1)
@@ -62,7 +68,17 @@ class ClassificationLoss(nn.Module):
         else:
             y_pred = (scores > 0.5).int()
             return torch_recall_score(y_true, y_pred)
+
         
+def torch_r2_score(target, prediction):
+    
+    mean = torch.mean(target, axis=0)
+    
+    RES = torch.sum((target-prediction)**2, axis=0)
+    TOT = torch.sum((target-mean)**2, axis=0)
+    
+    return torch.mean(1-RES/TOT)
+
         
 class MSELoss(nn.Module):
     
@@ -87,7 +103,6 @@ class MSELoss(nn.Module):
         output = self.fc2(h)
         return output
     
-    def evaluate(self, seq_vector, target):
+    def evaluate(self, target, prediction):
         
-        output = self.predict(seq_vector)
-        return torch.Tensor(r2_score(target.cpu(), output.cpu(), multioutput='raw_values')).cuda()
+        return torch_r2_score(target, prediction)

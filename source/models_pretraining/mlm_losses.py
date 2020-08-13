@@ -26,6 +26,7 @@ class MaskedMSELoss(nn.Module):
     def __init__(self, input_dim, output_dim):
         super().__init__()
         
+        self.normalize = nn.LayerNorm(output_dim)
         self.reconstructor = nn.Linear(input_dim, output_dim)
         self.mse_criterion = nn.MSELoss()
         
@@ -33,6 +34,7 @@ class MaskedMSELoss(nn.Module):
     def forward(self, sequence, mask, target):
         
         reconstruction = self.reconstructor(sequence)
+        target_normalized = self.normalize(target)
 
         assert target.shape == reconstruction.shape, \
                 "Mismatch between target and reconstruction segments %s, %s" % \
@@ -40,7 +42,7 @@ class MaskedMSELoss(nn.Module):
 
         assert mask is not None, "Masks should not be None"
 
-        target_gathered = gather_from_map(target, mask)
+        target_gathered = gather_from_map(target_normalized, mask)
         recon_gathered = gather_from_map(reconstruction, mask)
 
         mask_loss = self.mse_criterion(recon_gathered, target_gathered)
@@ -73,11 +75,7 @@ class MaskedCrossEntropyLoss(nn.Module):
         
         features_gathered_reshaped = classified_features_gathered.view(-1, batch_size, 128, self.n_binns).contiguous()
 
-        
-        ### Discretize target
-        discretized_target = torch.round(target*(self.n_binns-1))
-        target_gathered = gather_from_map(discretized_target, mask)
-        
+        target_gathered = gather_from_map(target, mask)
         
         assert target_gathered.shape == features_gathered_reshaped.shape[:-1], \
                 "Mismatch between target and model output segments %s, %s" % \

@@ -11,7 +11,7 @@ class MusicBertRegression(AbstractMusicBertTraining):
         super().__init__(name, dim_model=dim_model, **kwargs)    
         
         dim_vggish = 128
-        self.loss = MSELoss(dim_model, dim_model, out_dim)
+        self.loss = MSELoss(dim_model, 2*dim_model, out_dim)
         
     
     def training_loss(self, batch):
@@ -22,8 +22,7 @@ class MusicBertRegression(AbstractMusicBertTraining):
         # sample_sound dims = seq_len, batch_size, feat_dim
         
         c, extras = self.BERT(src_sound = sample_sound,
-                                   mask = True,
-                                   return_extras = True) 
+                              return_extras = True) 
         
         seq_vector = extras['sequence_vector']
         loss = self.loss(seq_vector, target)
@@ -41,8 +40,7 @@ class MusicBertRegression(AbstractMusicBertTraining):
         sample_sound = sample_sound.permute(1,0,2)
         
         c, extras = self.BERT(src_sound = sample_sound,
-                                   mask = True,
-                                   return_extras = True) 
+                              return_extras = True) 
         
         seq_vector = extras['sequence_vector']
         
@@ -50,20 +48,22 @@ class MusicBertRegression(AbstractMusicBertTraining):
         return output.detach()
     
     
-    def evaluate_fn(self, batch):
+    def evaluate(self, val_dataloader):
+        self.eval()
+        with torch.no_grad():
             
-        sample_sound = batch['song_features'].to(self.get_device()).permute(1,0,2)
-        target = batch['target'].squeeze().long().to(self.get_device())
-        
-        # sample_sound dims = seq_len, batch_size, feat_dim
-        
-        c, extras = self.BERT(src_sound = sample_sound,
-                                   mask = True,
-                                   return_extras = True) 
-        
-        seq_vector = extras['sequence_vector']
-        
-        score = self.loss.evaluate(seq_vector, target)
-        return score
-        
+            catter_pred = []
+            catter_target = []
+            for i, batch in enumerate(val_dataloader):
+                prediction = self(batch)
+                target = batch['target'].squeeze().to(self.get_device())
+
+                catter_pred.append(prediction)
+                catter_target.append(target)
+            
+            predictions = torch.cat(catter_pred, dim=0)
+            targets = torch.cat(catter_target, dim=0)
+            
+        self.train()      
+        return self.loss.evaluate(targets, predictions)
         

@@ -5,7 +5,7 @@ from itertools import zip_longest
 from IPython.display import Audio, display
 
 def allDone():
-      display(Audio(url='https://freesound.org/people/InspectorJ/sounds/415510/download/415510__inspectorj__bell-counter-a.wav', autoplay=True))
+      display(Audio(url='source/utils/data/bell.wav', autoplay=True))
 
 #Class that iterates over the iterable x for N times
 def generator_repeat(x, N):

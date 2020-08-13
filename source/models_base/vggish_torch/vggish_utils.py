@@ -1,4 +1,3 @@
-
 import torch
 
 def preprocess_sound(log_mel):
@@ -11,7 +10,7 @@ def preprocess_sound(log_mel):
     
     if seq_length < 96:
         # if less than 1 window size pad with zeros
-        padded = torch.zeros(batch_size, 96, n_features).to(self.get_device())
+        padded = torch.zeros(batch_size, 96, n_features).to(log_mel.device)
         
         padded[:, :seq_length, :] = log_mel
         log_mel = padded

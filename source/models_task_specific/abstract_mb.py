@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
 from ..models_base.mb_vggish import MusicBertVGGish
 from ..models_base.rnn_vggish import RNNVGGish
 from ..utils.generic_utils import generator_repeat, Timer
@@ -12,6 +12,8 @@ class AbstractMusicBertTraining(nn.Module):
 
     def __init__(self, name, dim_model=768, RNN= False, initialize_bert=True, **kwargs):
         super().__init__()
+        
+        self.name=name
         
         if initialize_bert:
             if RNN:
@@ -90,14 +92,19 @@ class AbstractMusicBertTraining(nn.Module):
             train_length = 0
             counter_template = "({:d} steps of {:d} epochs)"
             
-        save_interval = eval_interval = train_length//eval_per_epoch or 1000
+        description_template = self.name + " " + counter_template + " - Loss {:.4f} - Eval {:.4f}"
+        eval_loss = float("nan")
+            
+        save_interval = eval_interval = train_length//eval_per_epoch or 5000
+        scheduler_interval = 1000
 
         pbar = tqdm(generator_repeat(train_dataloader, epochs),
                     total = train_length*epochs or None, #None in case of Iterable Dataset
-                    desc=("Train "+counter_template+" - Loss...").format(0, epochs))
+                    dynamic_ncols = True, # It properly sizes the bar, both in console and notebook mode
+                    desc = description_template.format(0, epochs, float("nan"), float("nan")))
+        
         for i, batch in enumerate(pbar):
-            self.optimizer.zero_grad() # Reset Grad
-
+            
             loss = self.training_loss(batch)
                                                          
             loss.backward()
@@ -109,16 +116,13 @@ class AbstractMusicBertTraining(nn.Module):
             if i%10 == 0:
                 n_epoch = i//train_length if train_length!= 0 else i
                 display_loss = torch.mean(self.loss_curve[-100:])
-                pbar.set_description(("Train "+counter_template+" - Loss {:.6f}")\
-                                     .format(n_epoch+1, epochs, display_loss))
+                pbar.set_description(description_template.format(n_epoch+1, epochs, display_loss, eval_loss))
                 
             if i%eval_interval == -1%eval_interval and val_dataloader is not None:
-                tqdm.write("Evaluating...                             ", end="\r")
                 eval_loss = self.evaluate(val_dataloader)
                 self.validation_curve = self.append(self.validation_curve, eval_loss)
-                tqdm.write('Eval Loss ({:d} steps) {:.4f}         '.format(i, eval_loss), end="\r")
 
-            if i%eval_interval == -1%eval_interval:
+            if i%scheduler_interval == -1%scheduler_interval:
                 self.scheduler.step()
                 
             if i%save_interval == -1%save_interval:
@@ -132,7 +136,6 @@ class AbstractMusicBertTraining(nn.Module):
             scores = torch.tensor([]).to(self.get_device())
             with Timer() as t:
                 for i, batch in enumerate(val_dataloader):
-                    print("{:d} steps, Elapsed time {:d} s                  ".format(i, int(t())), end="\r")   
                     score = self.evaluate_fn(batch)
                     
                     scores = self.append(scores, score.detach())
